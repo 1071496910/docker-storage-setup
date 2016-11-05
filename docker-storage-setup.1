@@ -1,0 +1,150 @@
+.TH "DOCKER-STORAGE-SETUP" "1" "NOVEMBER 2014" "Helper Script for Docker Storage Setup" ""
+.SH NAME
+.PP
+docker\-storage\-setup - Grows the root filesystem and sets up storage for docker.
+.SH SYNOPSIS
+.PP
+\f[B]docker-storage-setup\f[] [OPTIONS]
+.SH OPTIONS
+.PP
+\f[B]--help\f[]
+  Print usage statement
+
+\f[B]--reset\f[]
+  Reset your docker storage to init state. Reset does not try to remove volume groups or try to remove any of the disks added previously.
+  
+Note: The
+\f[B]--reset\f[]
+command is not sufficient to cleanup your docker environment.  This option is used by other tools. (\f[B]atomic storage reset\f[])
+
+.SH EXAMPLES
+Run \f[B]docker-storage-setup\f[] after setting up your configuration in
+/etc/sysconfig/docker-storage-setup. One can look at
+/usr/lib/docker-storage-setup/docker-storage-setup for various options and
+their default settings. Anything user wants to change, should be changed
+in /etc/sysconfig/docker-storage-setup. This is the file which will
+override any settings specified in /usr/lib/docker-storage-setup/docker-storage-setup.
+
+lvm2 version should be same or higher than lvm2-2.02.112 for lvm thin pool
+functionality to work properly.
+
+\f[B]Supported options for the configuration file\f[]:
+
+STORAGE_DRIVER:
+      Specify a storage driver to be used with docker. Default
+      driver is "devicemapper". Other valid values are "overlay"
+      and "". Empty string tells docker-storage-setup to not do
+      any storage setup.
+
+EXTRA_DOCKER_STORAGE_OPTIONS:
+      A set of extra options that should be passed to the Docker
+      daemon.
+
+DEVS: A quoted, space-separated list of devices to be used.
+      If a drive is partitioned and contains a ${dev}1 partition,
+      that partition will be configured for use. Unpartitioned
+      drives will be partitioned and configured for use. If "VG"
+      is not specified, then use of the root disk's extra space
+      is implied.
+
+VG:   The volume group to use for docker storage.  Defaults to the
+      volume group where the root filesystem resides.  If VG is
+      specified and the volume group does not exist, it will be
+      created (which requires that "DEVS" be nonempty, since we don't
+      currently support putting a second partition on the root disk).
+
+      lvm2 version should be same or higher than lvm2-2.02.112 for lvm
+      thin pool functionality to work properly.
+
+GROWPART:
+      One can use this option to enable/disable growing of partition
+      table backing root volume group. This is intended for
+      virtualization and cloud installations. By default it is
+      disabled. Use GROWPART=true to enable automatic partition
+      table resizing.
+
+AUTO_EXTEND_POOL:
+      Enable automatic extension of pool by lvm. lvm can monitor
+      the pool and automatically extend it when pool is getting full.
+
+POOL_AUTOEXTEND_THRESHOLD:
+      Determines the pool extension threshold in terms of percentage
+      of pool size. For example, if threshold is 60, that means when
+      pool is 60% full, threshold has been hit.
+
+POOL_AUTOEXTEND_PERCENT:
+      Determines the amount by which pool needs to be grown. This is
+      specified in terms of % of pool size. So a value of 20 means
+      that when threshold is hit, pool will be grown by 20% of existing
+      pool size.
+
+CHUNK_SIZE:
+      Controls the chunk size/block size of thin pool. Value of CHUNK_SIZE
+      be suitable to be passed to --chunk-size option of lvconvert.
+
+DEVICE_WAIT_TIMEOUT:
+           Specifies a device wait timeout value in seconds. In
+           certain cases required devices might not be immediately
+           available and docker-storage-setup might decide to wait for
+           it. This timeout specifies how long one should wait for the
+           device. Default is 60 seconds. One can disable the wait by
+           specifying a value of 0.
+
+WIPE_SIGNATURES:
+      Wipe any signatures found on disk. Valid values are
+      true/false and default value is false. By default if any
+      signatures are found on disk operation is aborted. If this value
+      is set to true, then signatures will either be wiped or
+      overwritten as suitable. This also means that if there is any
+      data on disk, it will be lost.
+
+The options below should be specified as values acceptable to 'lvextend -L':
+
+ROOT_SIZE: The size to which the root filesystem should be grown.
+
+DATA_SIZE: The desired size for the docker data LV.  Defaults to using
+           40% free space in the VG after the root LV and docker
+           metadata LV have been allocated/grown.
+
+           DATA_SIZE can take values acceptable to "lvcreate -L" as
+           well as some values acceptable to "lvcreate -l". If user
+           intends to pass values acceptable to "lvcreate -l", then
+           only those values which contains "%" in syntax are
+           acceptable.  If value does not contain "%" it is assumed
+           value is suitable for "lvcreate -L".
+
+MIN_DATA_SIZE:
+           Specifies the minimum size of the data volume. If sufficient
+           free space is not available, the pool creation will fail.
+
+           Value should be a number followed by a optional suffix.
+           "bBsSkKmMgGtTpPeE" are valid suffixes. If no suffix is
+           specified then value will be considered as megabyte unit.
+
+           Both upper and lower case suffix represent same unit of
+           size. Use suffix B for Bytes, S for sectors as 512 bytes, K
+           for kibibytes (1024 bytes), M for mebibytes
+           (1024 kibibytes), G for gibibytes, T for tebibytes, P for
+           pebibytes and E for exbibytes.
+
+\f[B]Sample\f[]
+
+A simple, sample /etc/sysconfig/docker-storage-setup:
+
+DEVS=/dev/vdb
+
+DATA_SIZE=8GB
+
+.fi
+
+.SH "SEE ALSO"
+.BR atomic "(1)"
+
+.SH HISTORY
+
+.PP
+November 2014, originally compiled by Joe Brockmeier <jzb@redhat.com>
+based on comments in Andy Grimm's <agrimm@redhat.com> script.
+.SH AUTHORS
+Joe Brockmeier
+Andy Grimm
